@@ -168,6 +168,8 @@ def _index_rows(rows: Sequence[Record], key_columns: Sequence[str]) -> dict[tupl
     indexed: dict[tuple[Any, ...], Record] = {}
     for row in rows:
         key = tuple(row.get(column_name) for column_name in key_columns)
+        if key in indexed:
+            raise ValueError(f"Duplicate row detected for key {key!r}")
         indexed[key] = row
     return indexed
 

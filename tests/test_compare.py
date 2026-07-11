@@ -11,7 +11,7 @@ from compare_tests.config import DEFAULT_BASELINE_REF, load_compare_config
 
 class GitBaselineWorkspaceTests(unittest.TestCase):
     def test_defaults_to_main_and_checks_out_baseline_content(self) -> None:
-        with temporary_git_repository() as repository:
+        with TemporaryGitRepository() as repository:
             baseline_file = repository / "dataset.txt"
             baseline_file.write_text("baseline\n", encoding="utf-8")
             git(repository, "add", "dataset.txt")
@@ -24,7 +24,7 @@ class GitBaselineWorkspaceTests(unittest.TestCase):
                 self.assertEqual((baseline_workspace / "dataset.txt").read_text(encoding="utf-8"), "baseline\n")
 
     def test_accepts_commit_hash_override(self) -> None:
-        with temporary_git_repository() as repository:
+        with TemporaryGitRepository() as repository:
             tracked_file = repository / "dataset.txt"
             tracked_file.write_text("first\n", encoding="utf-8")
             git(repository, "add", "dataset.txt")
@@ -39,7 +39,7 @@ class GitBaselineWorkspaceTests(unittest.TestCase):
 
 class CompareServiceTests(unittest.TestCase):
     def test_runs_baseline_before_candidate_and_reports_differences(self) -> None:
-        with temporary_git_repository() as repository:
+        with TemporaryGitRepository() as repository:
             version_file = repository / "version.txt"
             version_file.write_text("baseline\n", encoding="utf-8")
             git(repository, "add", "version.txt")
@@ -114,6 +114,21 @@ class BuildReportTests(unittest.TestCase):
 
         self.assertEqual(report.rows[0].status, "excluded")
 
+    def test_rejects_duplicate_keys(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Duplicate row detected"):
+            build_report(
+                dataset_name="claims",
+                baseline_ref=DEFAULT_BASELINE_REF,
+                candidate_ref="workspace",
+                key_columns=("claim_id",),
+                excluded_columns=(),
+                baseline_rows=(
+                    {"claim_id": 1, "amount": 100},
+                    {"claim_id": 1, "amount": 125},
+                ),
+                candidate_rows=(),
+            )
+
 
 class RecordingAdapter:
     def __init__(self) -> None:
@@ -131,7 +146,7 @@ class RecordingAdapter:
         )
 
 
-class temporary_git_repository:
+class TemporaryGitRepository:
     def __enter__(self) -> Path:
         self._tempdir = tempfile.TemporaryDirectory()
         self.path = Path(self._tempdir.name)
