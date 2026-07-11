@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from compare_tests.compare import CompareService, GitBaselineWorkspace, SchemaChange, build_report
-from compare_tests.config import DEFAULT_BASELINE_REF, load_compare_config
+from compare_tests.config import DEFAULT_BASELINE_REF, CompareConfig, load_compare_config
 
 
 class GitBaselineWorkspaceTests(unittest.TestCase):
@@ -134,7 +134,7 @@ class RecordingAdapter:
     def __init__(self) -> None:
         self.calls: list[str] = []
 
-    def materialize(self, workspace: Path, config: object) -> tuple[dict[str, object], ...]:
+    def materialize(self, workspace: Path, config: CompareConfig) -> tuple[dict[str, object], ...]:
         version = (workspace / "version.txt").read_text(encoding="utf-8")
         self.calls.append(version)
         return (

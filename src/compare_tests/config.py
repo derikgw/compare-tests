@@ -18,7 +18,8 @@ class CompareConfig:
         dataset_name = str(source["dataset_name"])
         key_columns = tuple(str(value) for value in source["key_columns"])
         excluded_columns = tuple(str(value) for value in source.get("excluded_columns", ()))
-        baseline_ref = str(source.get("baseline_ref") or DEFAULT_BASELINE_REF)
+        baseline_ref_value = source.get("baseline_ref", DEFAULT_BASELINE_REF)
+        baseline_ref = DEFAULT_BASELINE_REF if baseline_ref_value is None else str(baseline_ref_value)
         return cls(
             dataset_name=dataset_name,
             key_columns=key_columns,
