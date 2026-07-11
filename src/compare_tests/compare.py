@@ -105,7 +105,7 @@ class CompareService:
         candidate_rows = tuple(self._adapter.materialize(self._repository, config))
         return build_report(
             dataset_name=config.dataset_name,
-            baseline_ref=config.baseline_ref,
+            baseline_ref=config.baseline_ref or DEFAULT_BASELINE_REF,
             candidate_ref="workspace",
             key_columns=config.key_columns,
             excluded_columns=config.excluded_columns,

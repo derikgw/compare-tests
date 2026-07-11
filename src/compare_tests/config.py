@@ -11,15 +11,17 @@ class CompareConfig:
     dataset_name: str
     key_columns: tuple[str, ...]
     excluded_columns: tuple[str, ...] = ()
-    baseline_ref: str = DEFAULT_BASELINE_REF
+    baseline_ref: str | None = DEFAULT_BASELINE_REF
 
     @classmethod
     def from_mapping(cls, source: Mapping[str, Any]) -> "CompareConfig":
         dataset_name = str(source["dataset_name"])
         key_columns = tuple(str(value) for value in source["key_columns"])
         excluded_columns = tuple(str(value) for value in source.get("excluded_columns", ()))
-        baseline_ref_value = source.get("baseline_ref", DEFAULT_BASELINE_REF)
-        baseline_ref = DEFAULT_BASELINE_REF if baseline_ref_value is None else str(baseline_ref_value)
+        if "baseline_ref" in source:
+            baseline_ref = None if source["baseline_ref"] is None else str(source["baseline_ref"])
+        else:
+            baseline_ref = DEFAULT_BASELINE_REF
         return cls(
             dataset_name=dataset_name,
             key_columns=key_columns,

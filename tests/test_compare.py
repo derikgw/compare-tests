@@ -67,6 +67,10 @@ class CompareServiceTests(unittest.TestCase):
 
 
 class BuildReportTests(unittest.TestCase):
+    def test_config_preserves_explicit_none_baseline_ref(self) -> None:
+        config = load_compare_config({"dataset_name": "claims", "key_columns": ["claim_id"], "baseline_ref": None})
+        self.assertIsNone(config.baseline_ref)
+
     def test_reports_schema_changes_and_excluded_only_rows(self) -> None:
         report = build_report(
             dataset_name="claims",
@@ -151,8 +155,8 @@ class TemporaryGitRepository:
         self._tempdir = tempfile.TemporaryDirectory()
         self.path = Path(self._tempdir.name)
         git(self.path, "init", "-b", "main")
-        git(self.path, "config", "user.name", "Copilot")
-        git(self.path, "config", "user.email", "copilot@example.com")
+        git(self.path, "config", "user.name", "CI")
+        git(self.path, "config", "user.email", "ci@example.com")
         return self.path
 
     def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
