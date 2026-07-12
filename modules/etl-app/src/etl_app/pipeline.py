@@ -13,6 +13,8 @@ class ClaimRecord:
     claim_type: str
     total_charge: float
     line_count: int
+    lines: str
+    diagnosis_codes: str
     updated_at: str
 
 
@@ -23,7 +25,7 @@ def run_pipeline(*, variant: str, input_root: Path, output_db: Path) -> None:
         _create_schema(connection)
         connection.execute("DELETE FROM claims")
         connection.executemany(
-            "INSERT INTO claims (claim_id, member_id, claim_type, total_charge, line_count, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO claims (claim_id, member_id, claim_type, total_charge, line_count, lines, diagnosis_codes, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 (
                     claim.claim_id,
@@ -31,6 +33,8 @@ def run_pipeline(*, variant: str, input_root: Path, output_db: Path) -> None:
                     claim.claim_type,
                     claim.total_charge,
                     claim.line_count,
+                    claim.lines,
+                    claim.diagnosis_codes,
                     claim.updated_at,
                 )
                 for claim in claims
@@ -52,9 +56,13 @@ def _load_claim_records(input_root: Path, *, variant: str) -> list[ClaimRecord]:
 
 
 def _transform_claim(claim: dict[str, object], *, variant: str) -> ClaimRecord:
+    _ = variant
     lines = claim.get("lines", [])
     if not isinstance(lines, list):
         raise ValueError("Claim lines must be a list.")
+    diagnosis_codes = claim.get("diagnosis_codes", [])
+    if not isinstance(diagnosis_codes, list):
+        raise ValueError("Claim diagnosis_codes must be a list.")
     line_charge_total = 0.0
     for line in lines:
         if not isinstance(line, dict):
@@ -62,9 +70,6 @@ def _transform_claim(claim: dict[str, object], *, variant: str) -> ClaimRecord:
         line_charge_total += float(line.get("line_charge", 0))
 
     total_charge = line_charge_total
-    if variant == "candidate":
-        # Intentional behavior difference for compare testing.
-        total_charge = round(total_charge * 1.01, 2)
 
     return ClaimRecord(
         claim_id=str(claim["claim_id"]),
@@ -72,19 +77,24 @@ def _transform_claim(claim: dict[str, object], *, variant: str) -> ClaimRecord:
         claim_type=str(claim.get("claim_type", "")),
         total_charge=total_charge,
         line_count=len(lines),
+        lines=json.dumps(lines, ensure_ascii=False, separators=(",", ":")),
+        diagnosis_codes=json.dumps(diagnosis_codes, ensure_ascii=False, separators=(",", ":")),
         updated_at=str(claim.get("updated_at", "")),
     )
 
 
 def _create_schema(connection: sqlite3.Connection) -> None:
+    connection.execute("DROP TABLE IF EXISTS claims")
     connection.execute(
         """
-        CREATE TABLE IF NOT EXISTS claims (
+        CREATE TABLE claims (
             claim_id TEXT PRIMARY KEY,
             member_id TEXT NOT NULL,
             claim_type TEXT NOT NULL,
             total_charge REAL NOT NULL,
             line_count INTEGER NOT NULL,
+            lines TEXT NOT NULL,
+            diagnosis_codes TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
         """

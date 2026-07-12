@@ -2,13 +2,18 @@
 
 Guinea pig ETL module that reads local x12-json files and materializes SQLite output.
 
+Current `claims` output stores nested arrays as serialized JSON text:
+
+- `lines`
+- `diagnosis_codes`
+
 ## Run
 
 ```bash
 etl-app run --input-root ./data/raw --output-db ./runs/output.db
 ```
 
-Optional: `--variant candidate` enables the compare-demo behavior.
+`--variant` is accepted for runtime profile wiring, but current transform behavior is structure-preserving across variants.
 
 ## Scripts
 

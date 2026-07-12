@@ -43,6 +43,22 @@ class DatasetComparisonResult:
     dataset_name: str
     table_name: str
     phase_results: tuple[PhaseResult, ...]
+    value_rows: tuple["ValueRowComparison", ...]
+
+
+@dataclass(frozen=True)
+class ValueColumnComparison:
+    column_name: str
+    status: str
+    baseline_value: Any
+    candidate_value: Any
+
+
+@dataclass(frozen=True)
+class ValueRowComparison:
+    status: str
+    key: dict[str, Any]
+    columns: tuple[ValueColumnComparison, ...]
 
 
 @dataclass(frozen=True)
@@ -50,3 +66,4 @@ class CompareRunResult:
     baseline_ref: str
     candidate_ref: str
     datasets: tuple[DatasetComparisonResult, ...]
+    report_artifacts: dict[str, str]
