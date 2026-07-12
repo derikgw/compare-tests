@@ -1,0 +1,7 @@
+phase:
+  id: schema
+  enabled: true
+  order: 100
+  severity: high
+  config:
+    allow_additive_columns: false

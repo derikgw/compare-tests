@@ -1,0 +1,10 @@
+etl:
+  baseline_ref: main
+  candidate_ref: workspace
+  baseline_working_subpath: modules/etl-app
+  baseline_checkout_dir: ./runs/worktrees/baseline-repo
+  working_dir: ../../etl-app
+  baseline:
+    command: python -m etl_app run --variant baseline
+  candidate:
+    command: python -m etl_app run --variant candidate

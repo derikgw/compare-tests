@@ -1,0 +1,7 @@
+phase:
+  id: datatype
+  enabled: true
+  order: 200
+  severity: medium
+  config:
+    ignore_nulls: true
