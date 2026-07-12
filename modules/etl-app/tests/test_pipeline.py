@@ -10,7 +10,7 @@ from etl_app.pipeline import run_pipeline
 
 
 class PipelineTests(unittest.TestCase):
-    def test_transforms_claim_output_without_variant_math_drift(self) -> None:
+    def test_transforms_claim_output_without_total_charge_column(self) -> None:
         fixture_root = Path(__file__).resolve().parents[1] / "data" / "raw"
         with tempfile.TemporaryDirectory() as tempdir:
             baseline_db = Path(tempdir) / "baseline.db"
@@ -19,20 +19,25 @@ class PipelineTests(unittest.TestCase):
             run_pipeline(variant="candidate", input_root=fixture_root, output_db=candidate_db)
 
             with sqlite3.connect(baseline_db) as baseline_conn, sqlite3.connect(candidate_db) as candidate_conn:
-                baseline_amount = baseline_conn.execute(
-                    "SELECT total_charge FROM claims WHERE claim_id = 'C-1001'"
-                ).fetchone()[0]
                 lines_text = baseline_conn.execute(
                     "SELECT lines FROM claims WHERE claim_id = 'C-1001'"
                 ).fetchone()[0]
                 diagnosis_codes_text = baseline_conn.execute(
                     "SELECT diagnosis_codes FROM claims WHERE claim_id = 'C-1001'"
                 ).fetchone()[0]
-                candidate_amount = candidate_conn.execute(
-                    "SELECT total_charge FROM claims WHERE claim_id = 'C-1001'"
+                columns = {
+                    row[1]
+                    for row in baseline_conn.execute("PRAGMA table_info(claims)").fetchall()
+                }
+                baseline_lines = baseline_conn.execute(
+                    "SELECT lines FROM claims WHERE claim_id = 'C-1001'"
+                ).fetchone()[0]
+                candidate_lines = candidate_conn.execute(
+                    "SELECT lines FROM claims WHERE claim_id = 'C-1001'"
                 ).fetchone()[0]
 
-            self.assertEqual(baseline_amount, candidate_amount)
+            self.assertNotIn("total_charge", columns)
+            self.assertEqual(baseline_lines, candidate_lines)
             lines = json.loads(lines_text)
             self.assertIsInstance(lines, list)
             self.assertEqual(len(lines), 2)

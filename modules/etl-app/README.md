@@ -7,6 +7,8 @@ Current `claims` output stores nested arrays as serialized JSON text:
 - `lines`
 - `diagnosis_codes`
 
+`claims` transform and table mapping live in `src/etl_app/claims/`.
+
 ## Run
 
 ```bash
