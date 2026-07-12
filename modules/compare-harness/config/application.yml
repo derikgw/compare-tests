@@ -1,0 +1,38 @@
+app:
+  name: compare-harness
+
+etl:
+  baseline_ref: main
+  candidate_ref: workspace
+  baseline_working_subpath: modules/etl-app
+  baseline_checkout_dir: ./runs/worktrees/baseline-repo
+  working_dir: ../../etl-app
+  baseline:
+    command: python -m etl_app run --variant baseline
+  candidate:
+    command: python -m etl_app run --variant candidate
+
+io:
+  sqlite:
+    baseline_db: ./runs/baseline/output.db
+    candidate_db: ./runs/candidate/output.db
+
+compare:
+  fail_fast: false
+  phase_imports:
+    - compare/phases/schema.yml
+    - compare/phases/datatype.yml
+    - compare/phases/hash.yml
+    - compare/phases/rowdiff.yml
+  pipeline:
+    - schema
+    - datatype
+    - hash
+    - rowdiff
+  datasets:
+    - name: claims
+      table: claims
+      key_columns:
+        - claim_id
+      excluded_columns:
+        - updated_at

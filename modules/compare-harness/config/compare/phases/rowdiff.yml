@@ -1,0 +1,7 @@
+phase:
+  id: rowdiff
+  enabled: true
+  order: 400
+  severity: medium
+  config:
+    max_findings: 500

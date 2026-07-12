@@ -1,0 +1,44 @@
+{
+  "batch_id": "demo-001",
+  "received_at": "2026-07-11T00:00:00Z",
+  "claims": [
+    {
+      "claim_id": "C-1001",
+      "member_id": "M-2001",
+      "claim_type": "professional",
+      "updated_at": "2026-07-10",
+      "lines": [
+        {
+          "line_no": 1,
+          "proc_code": "99213",
+          "line_charge": 125.5
+        },
+        {
+          "line_no": 2,
+          "proc_code": "87070",
+          "line_charge": 32.0
+        }
+      ],
+      "diagnosis_codes": [
+        "J10.1",
+        "R05.9"
+      ]
+    },
+    {
+      "claim_id": "C-1002",
+      "member_id": "M-2002",
+      "claim_type": "institutional",
+      "updated_at": "2026-07-10",
+      "lines": [
+        {
+          "line_no": 1,
+          "proc_code": "A0428",
+          "line_charge": 210.0
+        }
+      ],
+      "diagnosis_codes": [
+        "S93.4XXA"
+      ]
+    }
+  ]
+}

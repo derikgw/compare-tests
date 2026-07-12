@@ -1,0 +1,116 @@
+# -----------------------------
+# OS / editor metadata
+# -----------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+*.swp
+*.swo
+*~
+
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.nox/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+site/
+.eggs/
+*.egg
+*.egg-info/
+pip-wheel-metadata/
+.venv/
+venv/
+env/
+ENV/
+.ipynb_checkpoints/
+
+# -----------------------------
+# Node / JavaScript
+# -----------------------------
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+.next/
+.nuxt/
+.svelte-kit/
+.parcel-cache/
+coverage/
+*.tsbuildinfo
+
+# -----------------------------
+# Build output / generated artifacts
+# -----------------------------
+build/
+dist/
+tmp/
+temp/
+out/
+target/
+release/
+debug/
+artifacts/
+runs/
+
+# -----------------------------
+# Logs
+# -----------------------------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -----------------------------
+# Secrets / local environment
+# -----------------------------
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.jks
+*.keystore
+secrets/
+
+# -----------------------------
+# Executables / binaries
+# -----------------------------
+*.exe
+*.dll
+*.so
+*.dylib
+*.bin
+*.o
+*.obj
+*.a
+*.lib
+*.class
+*.jar
+*.war
+*.apk

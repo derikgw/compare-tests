@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compare-tests"
+version = "0.1.0"
+description = "Baseline versus candidate ETL comparison support."
+readme = "README.md"
+requires-python = ">=3.10"
+
+[tool.setuptools.package-dir]
+"" = "modules/compare-core/src"
+
+[tool.setuptools.packages.find]
+where = ["modules/compare-core/src"]

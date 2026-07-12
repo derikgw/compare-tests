@@ -1,0 +1,7 @@
+phase:
+  id: hash
+  enabled: true
+  order: 300
+  severity: medium
+  config:
+    exclude_columns: true
