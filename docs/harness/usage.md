@@ -18,11 +18,15 @@ compare-harness run --profile local
 
 Baseline ETL checkout defaults to:
 
-- `modules/compare-harness/config/runs/worktrees/baseline-repo`
+- `modules/compare-harness/output/worktrees/baseline-repo`
 
 Candidate ETL source defaults to:
 
 - `modules/etl-app`
+
+Generated outputs default to:
+
+- `modules/compare-harness/output`
 
 ## Override config directory
 

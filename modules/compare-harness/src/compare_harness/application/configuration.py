@@ -31,6 +31,7 @@ class PipelinePhaseConfig:
 class HarnessConfig:
     repository_root: Path
     config_dir: Path
+    output_root: Path
     profile: str | None
     baseline_ref: str
     candidate_ref: str
@@ -38,9 +39,12 @@ class HarnessConfig:
     baseline_checkout_dir: Path
     baseline_db_path: Path
     candidate_db_path: Path
+    output_reader_adapter: str
     etl_working_dir: Path
     baseline_command: str
     candidate_command: str
+    report_adapters: tuple[str, ...]
+    markdown_report_path: Path
     fail_fast: bool
     datasets: tuple[DatasetConfig, ...]
     pipeline: tuple[str, ...]
@@ -70,6 +74,9 @@ def load_harness_config(*, config_dir: str | Path | None = None, profile: str | 
 def _parse_harness_config(raw: dict[str, Any], *, config_dir: Path, profile: str | None) -> HarnessConfig:
     etl = _as_dict(raw.get("etl"), "etl")
     compare = _as_dict(raw.get("compare"), "compare")
+    report = _as_dict(raw.get("report", {}), "report")
+    output_reader = _as_dict(raw.get("output_reader", {}), "output_reader")
+    output = _as_dict(raw.get("output", {}), "output")
     io = _as_dict(raw.get("io"), "io")
     sqlite = _as_dict(io.get("sqlite"), "io.sqlite")
 
@@ -82,20 +89,42 @@ def _parse_harness_config(raw: dict[str, Any], *, config_dir: Path, profile: str
     pipeline = tuple(str(item) for item in _as_list(compare.get("pipeline"), "compare.pipeline"))
     _validate_pipeline(pipeline, phases)
 
+    output_reader_adapter = output_reader.get("adapter")
+    if not isinstance(output_reader_adapter, str) or not output_reader_adapter.strip():
+        raise ValueError(
+            "Missing required config: output_reader.adapter. "
+            "Example:\noutput_reader:\n  adapter: sqlite"
+        )
+    report_adapters = tuple(str(item) for item in _as_list(report.get("adapters"), "report.adapters"))
+    if not report_adapters:
+        raise ValueError(
+            "Missing required config: report.adapters must include at least one adapter. "
+            "Example:\nreport:\n  adapters:\n    - markdown"
+        )
+
     repository_root = _resolve_repository_root(config_dir)
+    output_root = _resolve_path(config_dir, str(output.get("root_dir", "../output")))
     return HarnessConfig(
         repository_root=repository_root,
         config_dir=config_dir,
+        output_root=output_root,
         profile=profile,
         baseline_ref=str(etl.get("baseline_ref", "main")),
         candidate_ref=str(etl.get("candidate_ref", "workspace")),
         baseline_working_subpath=Path(str(etl.get("baseline_working_subpath", "modules/etl-app"))),
-        baseline_checkout_dir=(config_dir / str(etl.get("baseline_checkout_dir", "./runs/worktrees/baseline-repo"))).resolve(),
-        baseline_db_path=(config_dir / str(sqlite["baseline_db"])).resolve(),
-        candidate_db_path=(config_dir / str(sqlite["candidate_db"])).resolve(),
+        baseline_checkout_dir=_resolve_output_path(
+            output_root, str(etl.get("baseline_checkout_dir", "worktrees/baseline-repo"))
+        ),
+        baseline_db_path=_resolve_output_path(output_root, str(sqlite["baseline_db"])),
+        candidate_db_path=_resolve_output_path(output_root, str(sqlite["candidate_db"])),
+        output_reader_adapter=output_reader_adapter.strip(),
         etl_working_dir=(config_dir / str(etl["working_dir"])).resolve(),
         baseline_command=str(_as_dict(etl.get("baseline"), "etl.baseline")["command"]),
         candidate_command=str(_as_dict(etl.get("candidate"), "etl.candidate")["command"]),
+        report_adapters=report_adapters,
+        markdown_report_path=_resolve_output_path(
+            output_root, str(report.get("markdown_output", "reports/compare-report.md"))
+        ),
         fail_fast=bool(compare.get("fail_fast", False)),
         datasets=dataset_specs,
         pipeline=pipeline,
@@ -214,3 +243,17 @@ def _resolve_repository_root(config_dir: Path) -> Path:
         if result.returncode == 0:
             return Path(result.stdout.strip()).resolve()
     return config_dir.resolve()
+
+
+def _resolve_path(config_dir: Path, raw_path: str) -> Path:
+    candidate = Path(raw_path)
+    if candidate.is_absolute():
+        return candidate
+    return (config_dir / candidate).resolve()
+
+
+def _resolve_output_path(output_root: Path, raw_path: str) -> Path:
+    candidate = Path(raw_path)
+    if candidate.is_absolute():
+        return candidate
+    return (output_root / candidate).resolve()

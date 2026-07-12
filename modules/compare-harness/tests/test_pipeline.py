@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
 
 from compare_harness.adapters.phases_builtin import HashPhase, RowDiffPhase, SchemaPhase
+from compare_harness.adapters.sqlite_loader import SQLiteOutputDatasetReader
 from compare_harness.application.configuration import _parse_harness_config
 from compare_harness.domain.models import CompareContext
 
@@ -30,6 +32,8 @@ class ConfigurationTests(unittest.TestCase):
                     "candidate": {"command": "echo candidate"},
                 },
                 "io": {"sqlite": {"baseline_db": "baseline.db", "candidate_db": "candidate.db"}},
+                "output_reader": {"adapter": "sqlite"},
+                "report": {"adapters": ["markdown"], "markdown_output": "report.md"},
                 "compare": {
                     "fail_fast": False,
                     "phase_imports": ["compare/phases/schema.yml", "compare/phases/hash.yml"],
@@ -42,6 +46,9 @@ class ConfigurationTests(unittest.TestCase):
             self.assertEqual(config.pipeline, ("schema", "hash"))
             self.assertEqual(tuple(config.phases), ("schema", "hash"))
             self.assertEqual(config.datasets[0].name, "claims")
+            self.assertEqual(config.output_reader_adapter, "sqlite")
+            self.assertEqual(config.report_adapters, ("markdown",))
+            self.assertEqual(config.output_root, (root / "../output").resolve())
 
     def test_rejects_unknown_pipeline_phase(self) -> None:
         with tempfile.TemporaryDirectory() as tempdir:
@@ -53,6 +60,8 @@ class ConfigurationTests(unittest.TestCase):
                     "candidate": {"command": "echo candidate"},
                 },
                 "io": {"sqlite": {"baseline_db": "baseline.db", "candidate_db": "candidate.db"}},
+                "output_reader": {"adapter": "sqlite"},
+                "report": {"adapters": ["markdown"], "markdown_output": "report.md"},
                 "compare": {
                     "imports": [],
                     "phase_packs": [
@@ -72,6 +81,76 @@ class ConfigurationTests(unittest.TestCase):
             }
             with self.assertRaisesRegex(ValueError, "unknown phase ids"):
                 _parse_harness_config(raw, config_dir=root, profile=None)
+
+    def test_requires_output_reader_adapter(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            root = Path(tempdir)
+            raw = {
+                "etl": {
+                    "working_dir": ".",
+                    "baseline": {"command": "echo baseline"},
+                    "candidate": {"command": "echo candidate"},
+                },
+                "io": {"sqlite": {"baseline_db": "baseline.db", "candidate_db": "candidate.db"}},
+                "report": {"adapters": ["markdown"], "markdown_output": "report.md"},
+                "compare": {
+                    "phase_packs": [
+                        {"phase": {"id": "schema", "enabled": True, "order": 100, "severity": "high", "config": {}}}
+                    ],
+                    "pipeline": ["schema"],
+                    "datasets": [{"name": "claims", "table": "claims", "key_columns": ["claim_id"]}],
+                },
+            }
+            with self.assertRaisesRegex(ValueError, "output_reader.adapter"):
+                _parse_harness_config(raw, config_dir=root, profile=None)
+
+    def test_requires_report_adapters(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            root = Path(tempdir)
+            raw = {
+                "etl": {
+                    "working_dir": ".",
+                    "baseline": {"command": "echo baseline"},
+                    "candidate": {"command": "echo candidate"},
+                },
+                "io": {"sqlite": {"baseline_db": "baseline.db", "candidate_db": "candidate.db"}},
+                "output_reader": {"adapter": "sqlite"},
+                "report": {"markdown_output": "report.md"},
+                "compare": {
+                    "phase_packs": [
+                        {"phase": {"id": "schema", "enabled": True, "order": 100, "severity": "high", "config": {}}}
+                    ],
+                    "pipeline": ["schema"],
+                    "datasets": [{"name": "claims", "table": "claims", "key_columns": ["claim_id"]}],
+                },
+            }
+            with self.assertRaisesRegex(ValueError, "report.adapters"):
+                _parse_harness_config(raw, config_dir=root, profile=None)
+
+    def test_honors_custom_output_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            root = Path(tempdir)
+            raw = {
+                "etl": {
+                    "working_dir": ".",
+                    "baseline": {"command": "echo baseline"},
+                    "candidate": {"command": "echo candidate"},
+                },
+                "output": {"root_dir": "./custom-output"},
+                "io": {"sqlite": {"baseline_db": "baseline.db", "candidate_db": "candidate.db"}},
+                "output_reader": {"adapter": "sqlite"},
+                "report": {"adapters": ["markdown"], "markdown_output": "report.md"},
+                "compare": {
+                    "phase_packs": [
+                        {"phase": {"id": "schema", "enabled": True, "order": 100, "severity": "high", "config": {}}}
+                    ],
+                    "pipeline": ["schema"],
+                    "datasets": [{"name": "claims", "table": "claims", "key_columns": ["claim_id"]}],
+                },
+            }
+            config = _parse_harness_config(raw, config_dir=root, profile=None)
+            self.assertEqual(config.output_root, (root / "custom-output").resolve())
+            self.assertEqual(config.baseline_db_path, (root / "custom-output/baseline.db").resolve())
 
 
 class BuiltinPhaseTests(unittest.TestCase):
@@ -119,6 +198,37 @@ class BuiltinPhaseTests(unittest.TestCase):
         result = phase.run(context)
         self.assertEqual(result.status, "failed")
         self.assertEqual(result.findings[0].column, "amount")
+
+
+class SQLiteOutputAdapterTests(unittest.TestCase):
+    def test_loads_baseline_and_candidate_rows_for_table(self) -> None:
+        with tempfile.TemporaryDirectory() as tempdir:
+            root = Path(tempdir)
+            baseline_db = root / "baseline.db"
+            candidate_db = root / "candidate.db"
+            _create_claims_db(baseline_db, [("C-1001", 100.0), ("C-1002", 50.0)])
+            _create_claims_db(candidate_db, [("C-1001", 125.0), ("C-1002", 50.0)])
+
+            rows = SQLiteOutputDatasetReader().load_dataset(
+                baseline_db_path=baseline_db,
+                candidate_db_path=candidate_db,
+                table_name="claims",
+            )
+
+            self.assertEqual(len(rows.baseline_rows), 2)
+            self.assertEqual(len(rows.candidate_rows), 2)
+            self.assertEqual(rows.baseline_rows[0]["claim_id"], "C-1001")
+            self.assertEqual(rows.candidate_rows[0]["amount"], 125.0)
+
+
+def _create_claims_db(db_path: Path, rows: list[tuple[str, float]]) -> None:
+    with sqlite3.connect(db_path) as connection:
+        connection.execute("CREATE TABLE claims (claim_id TEXT PRIMARY KEY, amount REAL NOT NULL)")
+        connection.executemany(
+            "INSERT INTO claims (claim_id, amount) VALUES (?, ?)",
+            rows,
+        )
+        connection.commit()
 
 
 if __name__ == "__main__":

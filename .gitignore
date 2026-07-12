@@ -65,6 +65,7 @@ dist/
 tmp/
 temp/
 out/
+output/
 target/
 release/
 debug/
