@@ -1,0 +1,13 @@
+{
+  "name": "compare-tests",
+  "image": "mcr.microsoft.com/devcontainers/python:3-3.11-bookworm",
+  "workspaceFolder": "/workspaces/compare-tests",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance"
+      ]
+    }
+  }
+}
